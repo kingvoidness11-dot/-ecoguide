@@ -282,7 +282,7 @@ function mkTyper(el){
   function tick(){
     if (shown < target.length){
       const back = target.length - shown;
-      shown = rm ? target.length : Math.min(target.length, shown + Math.min(8, Math.max(2, Math.ceil(back / 35))));
+      shown = rm ? target.length : Math.min(target.length, shown + Math.min(5, Math.max(1, Math.ceil(back / 50))));
       el.innerHTML = md(target.slice(0, shown));
       chat.scrollTop = chat.scrollHeight;
     }
@@ -319,6 +319,20 @@ async function askStream(cfg, text, ty){
   if (cfg.provider === "anthropic"){ const s = await askApi(cfg, text); ty.set(s); return s; }
   return streamGemini(cfg, text, ty, true);
 }
+function quickAnswer(t){
+  const s = t.toLowerCase().replace(/ё/g,"е").trim();
+  if (/^(как (у тебя |твои )?дела|как ты|как жизнь|что нового|как поживаешь)[\s?!.]*$/.test(s)) return "Всё хорошо, спасибо! Готов рассказать про экологию Казахстана. Выберите тему выше или задайте вопрос.";
+  if (/^(спасибо|благодарю|рахмет|thanks|thank you)[\s!.]*$/.test(s)) return "Пожалуйста! Спрашивайте ещё.";
+  if (/^(пока|до свидания|удачи|сау бол)[\s!.]*$/.test(s)) return "До встречи! Берегите природу.";
+  if (s.length > 35) return null;
+  let best = null, sc = 0;
+  for (const e of KB){
+    let k2 = 0;
+    for (const k of e.k){ if (new RegExp("(^|[^а-яәғқңөұүһіa-z0-9])" + k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).test(s)) k2 += k.length > 5 ? 2 : 1; }
+    if (k2 > sc){ sc = k2; best = e; }
+  }
+  return sc >= 2 ? best.a : null;
+}
 let history = [], busy = false, sample = null;
 
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
@@ -354,8 +368,9 @@ async function ask(text){
       history.push({role:"user", content:text}, {role:"assistant", content:g});
       busy = false; sendBtn.disabled = false; q.focus(); return;
     }
-    if (TOPICS.includes(text)){
-      const g = localAnswer(text);
+    const quick = TOPICS.includes(text) ? localAnswer(text) : quickAnswer(text);
+    if (quick){
+      const g = quick;
       await say(bot, g);
       history.push({role:"user", content:text}, {role:"assistant", content:g});
       busy = false; sendBtn.disabled = false; q.focus(); return;
