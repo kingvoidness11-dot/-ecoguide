@@ -121,7 +121,7 @@ header p{font-size:15px;margin:6px 0 0;color:var(--ink);opacity:.75}
 .bar2 i{display:block;height:100%;background:var(--accent)}
 .score{font:700 40px "PT Serif",Georgia,serif}
 </style>
-<style>#cfg{display:none!important}</style></head>
+<style>#cfg{display:none!important}.msg.typing p:last-child::after,.msg.typing li:last-child::after{content:"";display:inline-block;width:2px;height:1.05em;margin-left:3px;vertical-align:-.15em;background:var(--accent);animation:cur 1s steps(1) infinite}@keyframes cur{50%{opacity:0}}@media (prefers-reduced-motion:reduce){.msg.typing p:last-child::after,.msg.typing li:last-child::after{animation:none}}</style></head>
 <body>
 <div class="app">
   <header>
@@ -221,13 +221,14 @@ function fetchT(url, opts, ms){
 }
 let autoModel = null;
 async function pickModel(key){
+  if (!autoModel){ try{ autoModel = localStorage.getItem("ecomodel") || null; }catch(_){} }
   if (autoModel) return autoModel;
   try{
     const r = await fetchT("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", {headers:{"x-goog-api-key":key}}, 8000);
     if (r.ok){
       const d = await r.json();
       const names = (d.models || []).filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => m.name.replace("models/","")).filter(n => /^gemini-[\d.]+-flash$/.test(n)).sort((a,b) => parseFloat(b.split("-")[1]) - parseFloat(a.split("-")[1]));
-      if (names.length) return (autoModel = names[0]);
+      if (names.length){ autoModel = names[0]; try{ localStorage.setItem("ecomodel", autoModel); }catch(_){} return autoModel; }
     }
   }catch(_){}
   return "gemini-flash-latest";
@@ -274,6 +275,50 @@ const dlg = document.getElementById("dlg"), dProv = document.getElementById("dPr
 document.getElementById("cfg").onclick = () => { const c = getCfg(); dProv.value = c.provider || "gemini"; dKey.value = c.key || ""; dModel.value = c.model || ""; dlg.showModal(); };
 document.getElementById("cfgform").addEventListener("submit", e => { if (e.submitter && e.submitter.id === "dSave") setCfg({provider:dProv.value, key:dKey.value.trim(), model:dModel.value.trim()}); });
 document.getElementById("dClear").onclick = () => { setCfg({}); dlg.close(); };
+function mkTyper(el){
+  const rm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let target = "", shown = 0, finished = false, done = null;
+  el.classList.add("typing");
+  function tick(){
+    if (shown < target.length){
+      const back = target.length - shown;
+      shown = rm ? target.length : Math.min(target.length, shown + Math.min(4, Math.max(1, Math.ceil(back / 60))));
+      el.innerHTML = md(target.slice(0, shown));
+      chat.scrollTop = chat.scrollHeight;
+    }
+    if (finished && shown >= target.length){ el.classList.remove("typing"); if (done) done(); return; }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+  return {set(s){ target = s; }, has(){ return target.length > 0; }, end(){ finished = true; return new Promise(r => { done = r; if (shown >= target.length && !el.classList.contains("typing")) r(); }); }};
+}
+async function say(el, s){ const ty = mkTyper(el); ty.set(s); await ty.end(); }
+async function streamGemini(cfg, text, ty, think){
+  const model = cfg.model || await pickModel(cfg.key);
+  const hist = history.slice(-8);
+  const contents = hist.map(m => ({role: m.role === "user" ? "user" : "model", parts:[{text:m.content}]})).concat([{role:"user", parts:[{text}]}]);
+  const gc = {maxOutputTokens:700};
+  if (think && /2\.5/.test(model)) gc.thinkingConfig = {thinkingBudget:0};
+  const r = await fetchT("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {method:"POST", headers:{"content-type":"application/json","x-goog-api-key":cfg.key}, body: JSON.stringify({systemInstruction:{parts:[{text:SYSTEM}]}, contents, generationConfig:gc})}, 20000);
+  if (!r.ok){ if (r.status === 400 && gc.thinkingConfig) return streamGemini(cfg, text, ty, false); throw await apiErr(r); }
+  const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", full = "";
+  for (;;){
+    const {value, done} = await rd.read(); if (done) break;
+    buf += dec.decode(value, {stream:true});
+    let i;
+    while ((i = buf.indexOf("\n")) >= 0){
+      const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+      if (!line.startsWith("data:")) continue;
+      try{ const d = JSON.parse(line.slice(5)); const ps = (((d.candidates || [])[0] || {}).content || {}).parts || []; const s = ps.map(x => x.text || "").join(""); if (s){ full += s; ty.set(full); } }catch(_){}
+    }
+  }
+  if (!full) throw new Error("Пустой ответ. Попробуйте переформулировать вопрос.");
+  return full;
+}
+async function askStream(cfg, text, ty){
+  if (cfg.provider === "anthropic"){ const s = await askApi(cfg, text); ty.set(s); return s; }
+  return streamGemini(cfg, text, ty, true);
+}
 let history = [], busy = false, sample = null;
 
 function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
@@ -305,15 +350,17 @@ async function ask(text){
   try{
     if (/^\s*(привет|здравствуй\S*|салем|сәлем|hi|hello)[\s!.]*$/i.test(text)){
       const g = localAnswer(text);
-      bot.innerHTML = md(g);
+      await say(bot, g);
       history.push({role:"user", content:text}, {role:"assistant", content:g});
       busy = false; sendBtn.disabled = false; q.focus(); return;
     }
     const cfg = getCfg();
     if (cfg.key){
-      const lim = rl(); if (lim){ bot.innerHTML = md(lim); busy = false; sendBtn.disabled = false; q.focus(); return; }
-      const txt = await askApi(cfg, text);
-      bot.innerHTML = md(txt);
+      const lim = rl(); if (lim){ await say(bot, lim); busy = false; sendBtn.disabled = false; q.focus(); return; }
+      const ty = mkTyper(bot); let txt;
+      try{ txt = await askStream(cfg, text, ty); }
+      catch(e){ if (ty.has()) throw e; txt = await askApi(cfg, text); ty.set(txt); }
+      await ty.end();
       history.push({role:"user", content:text}, {role:"assistant", content:txt});
       busy = false; sendBtn.disabled = false; q.focus(); return;
     }
@@ -326,7 +373,7 @@ async function ask(text){
     history.push({role:"user", content:text}, {role:"assistant", content:r.text});
   }catch(e){
     const loc = localAnswer(text) + (getCfg().key ? "\n\n(ИИ недоступен: " + hint(e) + ")" : "");
-    bot.innerHTML = md(loc);
+    await say(bot, loc);
     history.push({role:"user", content:text}, {role:"assistant", content:loc});
   }
   busy = false; sendBtn.disabled = false; q.focus();
