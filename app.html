@@ -299,7 +299,7 @@ async function streamGemini(cfg, text, ty, think){
   const contents = hist.map(m => ({role: m.role === "user" ? "user" : "model", parts:[{text:m.content}]})).concat([{role:"user", parts:[{text}]}]);
   const gc = {maxOutputTokens:500, temperature:0.5};
   if (think && /2\.5/.test(model)) gc.thinkingConfig = {thinkingBudget:0};
-  const r = await fetchT("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {method:"POST", headers:{"content-type":"application/json","x-goog-api-key":cfg.key}, body: JSON.stringify({systemInstruction:{parts:[{text:SYSTEM}]}, contents, generationConfig:gc})}, 20000);
+  const r = await fetchT("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {method:"POST", headers:{"content-type":"application/json","x-goog-api-key":cfg.key}, body: JSON.stringify({systemInstruction:{parts:[{text:SYSTEM}]}, contents, generationConfig:gc})}, 8000);
   if (!r.ok){ if (r.status === 400 && gc.thinkingConfig) return streamGemini(cfg, text, ty, false); throw await apiErr(r); }
   const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "", full = "";
   for (;;){
@@ -354,12 +354,18 @@ async function ask(text){
       history.push({role:"user", content:text}, {role:"assistant", content:g});
       busy = false; sendBtn.disabled = false; q.focus(); return;
     }
+    if (TOPICS.includes(text)){
+      const g = localAnswer(text);
+      await say(bot, g);
+      history.push({role:"user", content:text}, {role:"assistant", content:g});
+      busy = false; sendBtn.disabled = false; q.focus(); return;
+    }
     const cfg = getCfg();
     if (cfg.key){
       const lim = rl(); if (lim){ await say(bot, lim); busy = false; sendBtn.disabled = false; q.focus(); return; }
       const ty = mkTyper(bot); let txt;
       try{ txt = await askStream(cfg, text, ty); }
-      catch(e){ if (ty.has()) throw e; txt = await askApi(cfg, text); ty.set(txt); }
+      catch(e){ if (ty.has() || /abort/i.test(String((e && e.message) || e))) throw e; txt = await askApi(cfg, text); ty.set(txt); }
       await ty.end();
       history.push({role:"user", content:text}, {role:"assistant", content:txt});
       busy = false; sendBtn.disabled = false; q.focus(); return;
