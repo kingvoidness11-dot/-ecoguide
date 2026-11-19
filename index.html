@@ -48,8 +48,8 @@ h2{font:700 clamp(30px,4.5vw,46px)/1.1 "PT Serif",Georgia,serif;margin:0 0 14px;
 .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin:0;padding:0;list-style:none}
 .steps b{display:block;font:700 22px "PT Serif",serif;margin-bottom:6px}
 .steps p{margin:0;color:var(--muted)}
-.cta{margin:96px 0 0;background:var(--ink);color:#F2FAF8;border-radius:40px 8px 40px 8px;padding:56px clamp(24px,6vw,64px)}
-.cta h2{max-width:16em}
+.cta{margin:96px 0 0;background:#12302E;color:#F2FAF8;border-radius:40px 8px 40px 8px;padding:56px clamp(24px,6vw,64px)}
+.cta h2{max-width:16em;color:#F2FAF8}@media (prefers-color-scheme:dark){.cta{background:#1B433F;border:1px solid #2C5B56}}
 .cta .btn{background:var(--steppe);color:#12302E;box-shadow:none}
 footer{padding:56px 0 48px;color:var(--muted);font-size:15px}
 @media (max-width:760px){.row{grid-template-columns:1fr;gap:24px}.row:nth-of-type(even) .pic{order:0}.steps{grid-template-columns:1fr;gap:24px}nav .links{display:none}.btn.ghost{margin:12px 0 0}}
@@ -70,7 +70,7 @@ footer{padding:56px 0 48px;color:var(--muted);font-size:15px}
 <section class="block" id="tools">
 <h2>Три инструмента в одном приложении</h2>
 <p class="sub">Всё работает в браузере, регистрация не нужна.</p>
-<div class="row"><div><h3>Чат с ответами</h3><p>Спросите про Балхаш, Арал, Каспий, сайгаков, закон или население страны. Встроенная база знаний отвечает без интернета, а с ключом Gemini или Claude бот отвечает на любые вопросы.</p><a class="go" href="app.html">Задать вопрос</a></div>
+<div class="row"><div><h3>Чат с ответами</h3><p>Спросите про Балхаш, Арал, Каспий, сайгаков, закон или население страны. Простые вопросы получают мгновенный ответ из базы знаний, а на сложные отвечает подключённый ИИ.</p><a class="go" href="app.html">Задать вопрос</a></div>
 <div class="pic"><svg aria-label="Диалог с ботом" viewBox="0 0 200 140"><rect x="10" y="10" width="140" height="84" rx="22" fill="#0E8A8F"/><path d="M40 94 L34 126 L72 94Z" fill="#0E8A8F"/><circle cx="55" cy="52" r="9" fill="#fff"/><circle cx="80" cy="52" r="9" fill="#fff"/><circle cx="105" cy="52" r="9" fill="#fff"/><rect x="100" y="70" width="90" height="56" rx="18" fill="#B9A44A"/><path d="M165 126 L172 138 L150 126Z" fill="#B9A44A"/><path d="M130 112 C132 92 150 88 164 90 C164 106 150 116 130 112Z" fill="#fff"/></svg></div></div>
 <div class="row"><div><h3>Калькулятор экономии</h3><p>Введите расход электричества, воды и поездки на машине. Калькулятор покажет перерасход в тенге за месяц и год, след CO₂ и сколько деревьев его компенсируют.</p><a class="go" href="app.html">Посчитать</a></div>
 <div class="pic"><svg aria-label="Калькулятор и капля воды" viewBox="0 0 200 140"><rect x="30" y="10" width="110" height="120" rx="16" fill="#4FB7D6"/><rect x="44" y="24" width="82" height="30" rx="8" fill="#fff"/><rect x="52" y="34" width="40" height="10" rx="4" fill="#0E8A8F"/><g fill="#fff"><circle cx="56" cy="80" r="8"/><circle cx="85" cy="80" r="8"/><circle cx="114" cy="80" r="8"/><circle cx="56" cy="108" r="8"/><circle cx="85" cy="108" r="8"/><circle cx="114" cy="108" r="8"/></g><path d="M165 38 C148 66 144 82 165 96 C186 82 182 66 165 38Z" fill="#B9A44A"/></svg></div></div>
@@ -85,7 +85,7 @@ footer{padding:56px 0 48px;color:var(--muted);font-size:15px}
 <section class="block" id="how">
 <h2>Как это работает</h2>
 <p class="sub">Без регистрации и без установки.</p>
-<ul class="steps"><li><b>Работает сразу</b><p>Встроенная база знаний отвечает без интернета.</p></li><li><b>ИИ по желанию</b><p>Вставьте свой ключ Gemini или Claude. Он хранится только в вашем браузере.</p></li><li><b>Цифры можно проверить</b><p>Сверяйтесь с Казгидрометом, Минэкологии и stat.gov.kz.</p></li></ul>
+<ul class="steps"><li><b>Работает сразу</b><p>Встроенная база знаний отвечает без интернета.</p></li><li><b>ИИ уже подключён</b><p>Ключ вводить не нужно: задавайте вопрос, и бот отвечает.</p></li><li><b>Цифры можно проверить</b><p>Сверяйтесь с Казгидрометом, Минэкологии и stat.gov.kz.</p></li></ul>
 </section>
 <div class="cta"><h2>Начните с одного вопроса</h2><p style="margin:0 0 26px;opacity:.85">Откройте чат и спросите про то, что волнует именно вас.</p><a class="btn" href="app.html">Открыть ЭкоГид</a></div>
 </main>
